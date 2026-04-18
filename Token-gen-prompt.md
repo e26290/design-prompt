@@ -1,1308 +1,716 @@
-This must be built as a production-ready foundation for:
+# Token-gen-prompt｜互動版模板
 
-1\. a very large Figma component kit
+這必須建構為一個可用於生產環境的基礎，以便實現：
 
-2\. light/dark theming
-
-3\. radius mode switching
-
-4\. future React token usage
+1. 一個非常龐大的 Figma 元件庫
+2. 淺色/深色主題
+3. 圓角模式切換
+4. 未來使用 React 作為開發
 
 Do not create component-specific tokens.
-
 Do not simplify the system.
-
 Do not skip scopes.
-
 Do not leave typography partially connected.
-
 Do not use raw values on text styles when variable binding is possible.
 
-────────────────────────────────
+---
 
-PHASE 1 --- ASK ONLY THESE 4 QUESTIONS
+## PHASE 1 — 互動詢問
 
-────────────────────────────────
+在建立任何內容之前，依序詢問以下問題。每題回答後繼續下一題，全部回答完畢再一次確認，然後進入 PHASE 2。
 
-Before creating anything, ask the user these 4 questions only, in a
-short and beginner-friendly way.
+---
 
-Question 1 --- Brand color
+### 問題 1｜品牌主色（Primary Color）
 
-Ask:
+詢問內容：
 
-"What should the main brand color be?
+> 請輸入品牌主色。
+>
+> 可以直接給 hex（例：#057BC7），或描述顏色名稱（例：天藍色）。
+> 如果給顏色名稱，我會自動產生一組適合 UI 使用的 ramp。
 
-Examples:
+處理規則：
+- 若給 hex，以該色為 /600 基準，向上向下推算 ramp（30、100、200、300、500、600、700、800）
+- 若給顏色名稱，選一個適合 UI 的 hex 作為 /600，再推算 ramp
+- ramp 命名：`color/primary/30` 至 `color/primary/800`
 
-\- #0C6FF9
+---
 
-\- blue
+### 問題 2｜品牌副色（Secondary Color / Accent）
 
-\- royal blue
+詢問內容：
 
-If you only give a color name, choose a sensible accessible ramp around
-it."
+> 請輸入品牌副色（Accent）。
+>
+> 可以給 hex 或顏色名稱，也可以回答「不需要」。
+> 如果不需要，系統會略過副色相關的 token。
 
-Question 2 --- Accent color (optional)
+處理規則：
+- 若有副色，推算 ramp（30、100、300、500、600、700）
+- ramp 命名：`Color/Secondary/30` 至 `Color/Secondary/700`
+- 若回答「不需要」，跳過所有 Secondary token，後續 Semantic 層也不建立副色別名，也不要使用明顯的強調色漸層。
 
-Ask:
+---
 
-"Do you want an optional accent color?
+### 問題 3｜中性色系（Neutral Family）
 
-Examples:
+詢問內容：
 
-\- #FFB700
+> 請選擇中性色的色調方向：
+>
+> 1. **gray** — 純灰，無色溫（最通用）
+> 2. **slate** — 略帶藍灰（適合科技、金融類產品）
+> 3. **zinc** — 略帶暖灰（適合內容、媒體類產品）
+> 4. **stone** — 略帶棕灰（適合品牌、生活風格類產品）
+> 5. **品牌主色調色系灰** — 以灰色為主體，加入極少量品牌主色成分（飽和度控制在 5% 以內）
+> 6. **指定色系** — 自行輸入一個 hex，我會以此推算完整 ramp
+>
+> 輸入數字或選項名稱皆可。
 
-\- yellow
+處理規則：
+- 選 1–4：根據對應 family 的色調方向推算 Natural ramp
+- 選 5：以灰色為主體，萃取品牌主色的色相，加入極少量（飽和度 5% 以內），視覺上仍以灰為主
+- 選 6：請使用者輸入一個 hex，以該色作為 `Color/Natural/500` 基準，向上推算淡色（400、250、150、100、50），向下推算深色（700、800、900），`/0` 固定為 #FFFFFF，`/900` 固定為接近黑的深色
+- 所有選項最終都產出相同的 ramp 階數（0、50、100、150、250、400、500、700、800、900）
 
-\- orange
+---
 
-\- no
+### 問題 4｜字族（Font Family）
 
-If you say no, keep the system without a strong accent ramp."
+詢問內容：
 
-Question 3 --- Neutral color family
+> 請問要使用什麼字體？
+>
+> 預設為：
+> - 中文：Noto Sans TC
+> - 英文：Inter
+>
+> 可以直接回答「預設」，或告訴我要替換的字體名稱。
+> 例如：「中文改用 Noto Serif TC、英文改用 Geist」
+>
+> ⚠ 若指定的字體在 Figma 中不可用，會自動退回預設值。
 
-Ask:
+處理規則：
+- 中文字族 → `Font/Family/TW`
+- 英文字族 → `Font/Family/EN`
+- 若使用者只指定一種，另一種維持預設
+- 若使用者回答「預設」，兩者均使用預設值
 
-"Which neutral family should power the UI?
+---
 
-Choose one:
+### 問題 5｜裝置 Breakpoint
 
-\- gray
+詢問內容：
 
-\- slate
+> 請輸入裝置的畫面寬度。
+>
+> 預設：Desktop 1440px、Mobile 375px
+>
+> 是否需要加入 Tablet 斷點？
+> - 回答「不需要」或「預設」→ 僅建立 Desktop / Mobile 兩個 Mode
+> - 回答「需要」→ 額外建立 Tablet Mode，預設寬度 768px（可自訂）
+>
+> ⚠ 若建立 Tablet Mode，Font / Spacing / Radius 預設複製 Desktop 的值，如有需要可在建立後手動調整。
 
-\- zinc
+處理規則：
+- Desktop 寬度 → `layout/width` Desktop Mode 值
+- Mobile 寬度 → `layout/width` Mobile Mode 值
+- 若有 Tablet → `layout/width` Tablet Mode 值，預設 768px
+- `layout/desktop-open`、`layout/mobile-open`、`layout/tablet-open`（若有）記錄各裝置啟用狀態（boolean）
 
-\- stone"
+---
 
-Question 4 --- Heading and body font
+### 問題 6｜色彩模式設定
 
-Ask:
+本問題分三步驟詢問，依序進行。
 
-"What font should be used for headings and body text?
+---
 
-Examples:
+**問題 6-1｜主要 Mode**
 
-\- Inter
+詢問內容：
 
-\- Manrope
+> 你的產品主要以哪個模式為主？
+>
+> - **Light Mode** — 白底為主，適合大多數 B2B、工具型、內容型產品
+> - **Dark Mode** — 深底為主，適合影音、遊戲、創作工具類產品
 
-\- Satoshi
+處理規則：
+- 記錄主要 Mode 作為後續配色的基準
+- `Functional：Tokens` 的主 Mode 以此為準建立
 
-\- SF Pro
+---
 
-If the font is unavailable, fall back to Inter."
+**問題 6-2｜是否需要第二套 Mode**
 
-After the user answers, briefly restate the chosen setup in 4 short
-bullet points, then immediately build the system.
+詢問內容：
 
-Keep code font fixed as:
+> 是否需要同時提供第二套配色 Mode？
+>
+> - 回答「不需要」→ `Functional：Tokens` 僅建立單一 Mode
+> - 回答「需要」→ 繼續問題 6-3
 
-\- JetBrains Mono
+處理規則：
+- 若回答「不需要」，略過問題 6-3，直接進入確認環節
+- 若回答「需要」，繼續問題 6-3
 
-────────────────────────────────
+---
 
-PHASE 2 --- FIXED SYSTEM ARCHITECTURE
+**問題 6-3｜第二套 Mode 的配色方向**
 
-────────────────────────────────
+本題只在問題 6-2 回答「需要」時詢問。
 
-Everything below stays fixed except brand color, accent color, neutral
-family, and heading/body font.
+詢問內容：
 
-Create EXACTLY these local variable collections:
+> 品牌主色（Primary ramp）在兩個 Mode 下保持相同色碼不變，改變的是底色——也就是整個介面的「舞台」。
+>
+> 根據你的品牌主色，以下是幾個推薦的底調方向，請選擇一個：
+>
+> [AI 根據問題 1 的品牌主色，動態產生 3–4 個推薦選項，每個選項同時包含情境描述與對比度數值]
+>
+> 例如品牌主色為檸檬綠（#A8D400）時，AI 應列出：
+>
+> 1. **深墨綠底** `#1A2E0A` — 與主色同色系，自然有機感強，適合農業、健康、環保類產品｜主色對比度 **7.1:1** ✅ WCAG AAA
+> 2. **深炭灰底** `#1C1E1A` — 中性現代感，主色跳色明顯不搶戲，適合科技工具、SaaS 類產品｜主色對比度 **8.3:1** ✅ WCAG AAA
+> 3. **深橄欖底** `#222B10` — 暖綠色溫，整體色調統一沉穩，適合精品、生活風格類產品｜主色對比度 **6.2:1** ✅ WCAG AA
+> 4. **深黑底** `#141414` — 無色溫，主色對比最強烈，適合科技感或極簡風格產品｜主色對比度 **9.1:1** ✅ WCAG AAA
+>
+> 輸入數字即可。
 
-PRIMITIVE COLLECTIONS
+處理規則：
+- AI 必須根據問題 1 的品牌主色色相、明度、彩度，判斷哪些底調在視覺上協調且對比足夠，再列出 3–4 個選項
+- 每個選項必須同時提供：底色 hex、使用情境描述、主色在該底色上的對比度數值與 WCAG 等級
+- 對比度未達 WCAG AA（4.5:1）的底調不列入選項
+- 不推薦與主色色相過於相近且明度接近的底調（容易吃色）
+- 設計師選定後，AI 根據該底調推算 `Color/Dark/*` ramp 並加入 `Base：Style`，`Functional：Tokens` 的第二套 Mode 再 alias 這裡，不寫死色碼
+- 第二套配色不是單純反轉主 Mode 的 ramp，而是重新根據底調配置每個 token，確保視覺效果正確
 
-\- primitives.color
+---
 
-\- primitives.dimension
+### 確認環節
 
-\- primitives.radius
+所有問題回答完畢後，整理並輸出以下摘要請使用者確認：
 
-\- primitives.typography
+```
+以下是你的設定，確認後將開始建立 token 系統：
 
-\- primitives.number
+品牌主色：[hex 值]
+品牌副色：[hex 值 或「無」]
+中性色系：[選項名稱]
+中文字族：[字體名稱]
+英文字族：[字體名稱]
+Desktop 寬度：[px]
+Tablet 寬度：[px 或「無」]
+Mobile 寬度：[px]
+主要 Mode：[Light / Dark]
+第二套 Mode：[底調方向名稱 或「無」]
 
-\- primitives.shadow
+請確認以上內容，或告訴我需要修改的地方。
+```
 
-SEMANTIC COLLECTIONS
+確認後進入 PHASE 2。
 
-\- semantic.color
+---
 
-\- semantic.dimension
+## PHASE 2 — 建立 Primitive（Base）Collection
 
-\- semantic.radius
+**Collection 名稱：** `Base：Style`
+**Mode 數量：** 1 個 Mode
+**說明：** 所有原始值。其他 Collection 的 token 皆 alias 這裡，不重複寫值。
 
-\- semantic.typography
+---
 
-\- semantic.elevation
+### 2-A｜Color — Primary
 
-\- semantic.number
+根據問題 1 的輸入推算完整 ramp。
 
-Modes:
+Token 命名格式：
 
-\- semantic.color → modes: light, dark
+```
+Color/Primary/30
+Color/Primary/100
+Color/Primary/200
+Color/Primary/300
+Color/Primary/500
+Color/Primary/600   ← 品牌主色基準
+Color/Primary/700
+Color/Primary/800
+```
 
-\- semantic.elevation → modes: light, dark
+- Type：color
+- Scope：ALL_FILLS
 
-\- semantic.radius → modes: default, rounded, no-corner-radius
+---
 
-\- all primitive collections → single mode only
+### 2-B｜Color — Secondary
 
-\- semantic.typography → single mode only
+若問題 2 有副色，推算以下 ramp：
 
-\- semantic.dimension → single mode only
+```
+Color/Secondary/30
+Color/Secondary/100
+Color/Secondary/300
+Color/Secondary/500   ← 副色基準
+Color/Secondary/600
+Color/Secondary/700
+```
 
-\- semantic.number → single mode only
+- Type：color
+- Scope：ALL_FILLS
 
-Use slash naming everywhere.
+若問題 2 回答「不需要」，略過此區塊。
 
-Semantic variables must alias primitive variables wherever appropriate.
+---
 
-Do not duplicate primitive values inside semantic collections unless
-absolutely required by Figma limitations.
+### 2-C｜Color — Natural
 
-────────────────────────────────
+根據問題 3 的色系方向推算：
 
-PHASE 3 --- TOKEN MODEL TO CREATE
+```
+Color/Natural/0    → #FFFFFF
+Color/Natural/50
+Color/Natural/100
+Color/Natural/150
+Color/Natural/250
+Color/Natural/400
+Color/Natural/500
+Color/Natural/700
+Color/Natural/800
+Color/Natural/900
+```
 
-────────────────────────────────
+- 選項 5（品牌主色調色系灰）：以灰色為主體，品牌主色飽和度控制在 5% 以內，視覺上仍以灰為主
+- Type：color
+- Scope：ALL_FILLS
 
-A\) PRIMITIVES --- COLOR
+---
 
-Create color primitives with ramps for:
+### 2-D｜Color — Status
 
-\- transparent
+固定建立以下狀態色，不詢問使用者：
 
-\- black
+```
+Color/Global/Success/100
+Color/Global/Success/600
+Color/Global/Success/700
 
-\- white
+Color/Global/Danger/100
+Color/Global/Danger/600
+Color/Global/Danger/700
 
-\- neutral family chosen by the user
+Color/Global/Warning/100
+Color/Global/Warning/500
+Color/Global/Warning/600
 
-\- brand
+Color/Global/Alpha/Black-50   → #000000 @ alpha 50%
+Color/Global/Alpha/White-50   → #FFFFFF @ alpha 50%
+```
 
-\- accent (only if user requested one)
+- Type：color
+- Scope：ALL_FILLS
 
-\- success
+---
 
-\- warning
+### 2-E｜Color — Dark Ramp（第二套底色）
 
-\- danger
+若問題 6-2 回答「需要」，根據問題 6-3 設計師選定的底調方向，推算完整的深底色 ramp：
 
-\- info
+```
+Color/Dark/50    ← 最淡，用於 raised 層（卡片、浮層）
+Color/Dark/100   ← 次淡，用於 ghost hover
+Color/Dark/200   ← 底色基準（設計師選定的底調 hex）
+Color/Dark/300   ← 略深，用於 canvas（最底層背景）
+Color/Dark/400   ← 最深，用於強調邊框或深色 overlay
+```
 
-Use practical product-design ramp system:
+- 以設計師選定的底調 hex 作為 `Color/Dark/200` 基準，向上推算更亮的層次（50、100），向下推算更深的層次（300、400）
+- 各階之間明度差距約 5–8%，確保層次清晰可辨
+- Type：color
+- Scope：ALL_FILLS
 
-\- 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950
+若問題 6-2 回答「不需要」，略過此區塊。
 
-Suggested naming examples:
+---
 
-\- color/gray/50
+### 2-F｜Font — Family
 
-\- color/gray/100
+```
+Font/Family/TW   → 問題 4 中文字族
+Font/Family/EN   → 問題 4 英文字族
+```
 
-\- color/brand/500
+- Type：string
+- Scope：FONT_FAMILY
 
-\- color/accent/500
+---
 
-\- color/success/600
+### 2-G｜Font — Weight
 
-\- color/warning/500
+```
+Font/Weight/Regular   → "Regular"
+Font/Weight/Medium    → "Medium"
+Font/Weight/Bold      → "Bold"
+```
 
-\- color/danger/600
+- Type：string
+- Scope：FONT_STYLE
 
-\- color/info/600
+---
 
-\- color/black
+### 2-G｜Font — Size
 
-\- color/white
+```
+Font/Size/xs       → 12
+Font/Size/sm       → 14
+Font/Size/md       → 16
+Font/Size/lg       → 18
+Font/Size/xl       → 20
+Font/Size/2xl      → 24
+Font/Size/3xl      → 28
+Font/Size/4xl      → 32
+Font/Size/5xl      → 48
+Font/Size/Display  → 64
+```
 
-\- color/transparent
+- Type：number
+- Scope：FONT_SIZE
 
-Build a sensible accessible brand ramp from the provided brand color.
+---
 
-Build a sensible accent ramp from the accent color if provided.
+### 2-I｜Radius
 
-For neutral families, use the selected family name exactly in token
-names.
+```
+Radius/sm    → 12
+Radius/md    → 24
+Radius/xl    → 48
+Radius/pill  → 1000
+```
 
-B\) PRIMITIVES --- DIMENSION
+- Type：number
+- Scope：CORNER_RADIUS
 
-Create a 4px-based dimension system with useful small and large steps
-for product UI.
+---
 
-Use names like:
+### 2-J｜Spacing
 
-\- size/0 = 0
+```
+Spacing/1   → 4
+Spacing/2   → 8
+Spacing/3   → 12
+Spacing/4   → 16
+Spacing/5   → 20
+Spacing/6   → 24
+Spacing/8   → 32
+Spacing/10  → 40
+Spacing/12  → 48
+Spacing/16  → 64
+Spacing/18  → 72
+Spacing/20  → 80
+Spacing/30  → 120
+```
 
-\- size/1 = 4
+- Type：number
+- Scope：GAP、PADDING
 
-\- size/2 = 8
+---
 
-\- size/3 = 12
+## PHASE 3 — 建立 Semantic（Functional）Collection
 
-\- size/4 = 16
+**Collection 名稱：** `Functional：Tokens`
+**Mode 數量：**
+- 問題 6-2 選「不需要」→ 1 個 Mode（主要 Mode）
+- 問題 6-2 選「需要」→ 2 個 Mode（主要 Mode + 第二套 Mode）
 
-\- size/5 = 20
+**說明：** 採用屬性導向語義結構，分為 Surface / Content / Border / Action / Status 五個群組。所有值 alias `Base：Style`，不寫死色碼。
 
-\- size/6 = 24
+若只有單一 Mode，以下所有表格僅建立主要 Mode 欄位的值。
+若有第二套 Mode，Surface 背景層的深底色 alias `Color/Dark/*`（在 2-E 建立的 ramp），其餘 Content / Border / Action / Status 的 token 則根據底調重新選擇對應的 Primitive alias，確保視覺對比與可讀性，不直接反轉主 Mode 的 ramp。
 
-\- size/7 = 28
+以下表格以 Light 為主要 Mode、Dark 為第二套 Mode 示範，若主要 Mode 為 Dark 則對調。
 
-\- size/8 = 32
+---
 
-\- size/10 = 40
+### 3-A｜Surface 背景層
 
-\- size/12 = 48
+用於所有背景、容器、遮罩。
 
-\- size/14 = 56
+| Token 名稱 | Light alias | Dark alias |
+|---|---|---|
+| Surface/bg/canvas | Color/Natural/50 | Color/Natural/900 |
+| Surface/bg/default | Color/Natural/0 | Color/Natural/800 |
+| Surface/bg/raised | Color/Natural/0 | Color/Natural/700 |
+| Surface/bg/overlay | Color/Global/Alpha/Black-50 | Color/Global/Alpha/Black-50 |
+| Surface/bg/brand | Color/Primary/600 | Color/Primary/700 |
+| Surface/bg/brand-subtle | Color/Primary/30 | Color/Primary/800 |
 
-\- size/16 = 64
+- Type：color
+- Scope：FRAME_FILL、SHAPE_FILL
 
-\- size/20 = 80
+---
 
-\- size/24 = 96
+### 3-B｜Content 內容層
 
-\- size/32 = 128
+用於所有文字與圖示。
 
-Also create useful stroke-width primitives here if needed, or in
-primitives.number if your implementation is cleaner.
+| Token 名稱 | Light alias | Dark alias |
+|---|---|---|
+| Content/text/primary | Color/Natural/900 | Color/Natural/0 |
+| Content/text/secondary | Color/Natural/500 | Color/Natural/400 |
+| Content/text/tertiary | Color/Natural/400 | Color/Natural/500 |
+| Content/text/disabled | Color/Natural/250 | Color/Natural/700 |
+| Content/text/on-brand | Color/Natural/0 | Color/Natural/0 |
+| Content/text/brand | Color/Primary/600 | Color/Primary/300 |
+| Content/text/link | Color/Primary/600 | Color/Primary/300 |
+| Content/text/link-hover | Color/Primary/700 | Color/Primary/200 |
+| Content/icon/default | Color/Natural/700 | Color/Natural/400 |
+| Content/icon/brand | Color/Primary/600 | Color/Primary/300 |
+| Content/icon/subtle | Color/Natural/400 | Color/Natural/500 |
 
-Keep naming clean and consistent.
+- Type：color
+- Scope：text → TEXT_FILL；icon → SHAPE_FILL
 
-C\) PRIMITIVES --- RADIUS
+---
 
-Create primitive radius values:
+### 3-C｜Border 邊框層
 
-\- radius/xs = 4
+用於所有線條與分隔線。
 
-\- radius/sm = 8
+| Token 名稱 | Light alias | Dark alias |
+|---|---|---|
+| Border/default | Color/Natural/150 | Color/Natural/700 |
+| Border/subtle | Color/Natural/100 | Color/Natural/800 |
+| Border/strong | Color/Natural/250 | Color/Natural/500 |
+| Border/brand | Color/Primary/600 | Color/Primary/300 |
+| Border/focus | Color/Primary/300 | Color/Primary/500 |
+| Border/error | Color/Global/Danger/600 | Color/Global/Danger/600 |
 
-\- radius/md = 12
+- Type：color
+- Scope：STROKE_COLOR
 
-\- radius/lg = 16
+---
 
-\- radius/xl = 20
+### 3-D｜Action 操作層
 
-\- radius/2xl = 24
+用於按鈕、輸入框等互動元件的背景與狀態色。
 
-\- radius/3xl = 32
+| Token 名稱 | Light alias | Dark alias |
+|---|---|---|
+| Action/primary/default | Color/Primary/600 | Color/Primary/500 |
+| Action/primary/hover | Color/Primary/700 | Color/Primary/400 |
+| Action/primary/subtle | Color/Primary/30 | Color/Primary/800 |
+| Action/primary/subtle-hover | Color/Primary/100 | Color/Primary/700 |
+| Action/secondary/default | Color/Secondary/500 | Color/Secondary/400 |
+| Action/secondary/hover | Color/Secondary/600 | Color/Secondary/300 |
+| Action/ghost/default | Color/Natural/0 | Color/Natural/800 |
+| Action/ghost/hover | Color/Natural/100 | Color/Natural/700 |
+| Action/disabled/bg | Color/Natural/250 | Color/Natural/700 |
+| Action/disabled/content | Color/Natural/400 | Color/Natural/500 |
 
-\- radius/pill = 9999
+若問題 2 選「不需要」，略過 `Action/secondary/*` 的建立。
 
-Also create rounded-mode primitive values:
+- Type：color
+- Scope：FRAME_FILL、SHAPE_FILL
 
-\- radius-rounded/xs = 8
+---
 
-\- radius-rounded/sm = 12
+### 3-E｜Status 狀態層
 
-\- radius-rounded/md = 16
+用於所有成功、警告、危險狀態。
 
-\- radius-rounded/lg = 20
+| Token 名稱 | Light alias | Dark alias |
+|---|---|---|
+| Status/success/bg | Color/Global/Success/100 | Color/Global/Success/700 |
+| Status/success/content | Color/Global/Success/700 | Color/Global/Success/100 |
+| Status/success/emphasis | Color/Global/Success/600 | Color/Global/Success/600 |
+| Status/warning/bg | Color/Global/Warning/100 | Color/Global/Warning/600 |
+| Status/warning/content | Color/Global/Warning/600 | Color/Global/Warning/100 |
+| Status/warning/emphasis | Color/Global/Warning/500 | Color/Global/Warning/500 |
+| Status/danger/bg | Color/Global/Danger/100 | Color/Global/Danger/700 |
+| Status/danger/content | Color/Global/Danger/600 | Color/Global/Danger/100 |
+| Status/danger/emphasis | Color/Global/Danger/600 | Color/Global/Danger/600 |
 
-\- radius-rounded/xl = 24
+- Type：color
+- Scope：bg → FRAME_FILL / SHAPE_FILL；content → TEXT_FILL / SHAPE_FILL；emphasis → SHAPE_FILL
 
-\- radius-rounded/2xl = 32
+---
 
-\- radius-rounded/3xl = 40
+## PHASE 4 — 建立 RWD（Components）Collection
 
-\- radius-rounded/pill = 9999
+**Collection 名稱：** `RWD：Components`
+**Mode 數量：**
+- 問題 5 選「不需要 Tablet」→ 2 個 Mode（Desktop、Mobile）
+- 問題 5 選「需要 Tablet」→ 3 個 Mode（Desktop、Tablet、Mobile）
 
-Also create no-radius primitive values:
+**說明：** Font、Spacing、Radius 全部跟著 Device Mode 切換。所有值 alias `Base：Style`。
 
-\- radius-none/xs = 0
+---
 
-\- radius-none/sm = 0
+### 4-A｜Layout 裝置旗標
 
-\- radius-none/md = 0
+2 個 Mode 時：
 
-\- radius-none/lg = 0
+```
+layout/desktop-open   Desktop: 1  /  Mobile: 0
+layout/mobile-open    Desktop: 0  /  Mobile: 1
+layout/width          Desktop: [問題5 Desktop值]  /  Mobile: [問題5 Mobile值]
+```
 
-\- radius-none/xl = 0
+3 個 Mode 時（含 Tablet）：
 
-\- radius-none/2xl = 0
+```
+layout/desktop-open   Desktop: 1  /  Tablet: 0  /  Mobile: 0
+layout/tablet-open    Desktop: 0  /  Tablet: 1  /  Mobile: 0
+layout/mobile-open    Desktop: 0  /  Tablet: 0  /  Mobile: 1
+layout/width          Desktop: [值]  /  Tablet: [值]  /  Mobile: [值]
+```
 
-\- radius-none/3xl = 0
+- Type：number（boolean 以 0/1 表示）
+- Scope：layout/width → WIDTH_HEIGHT；其餘 → ALL_SCOPES
 
-\- radius-none/pill = 4
+---
 
-D\) PRIMITIVES --- TYPOGRAPHY
+### 4-B｜Font 響應式字體
 
-Split primitive typography by property.
+Desktop 往下縮一階到 Mobile。若有 Tablet，預設複製 Desktop 值。
 
-Create:
+| Token 名稱 | Desktop | Tablet（若有） | Mobile |
+|---|---|---|---|
+| Font/--display | alias Font/Size/Display（64） | alias Font/Size/Display（64） | alias Font/Size/5xl（48） |
+| Font/--5xl | alias Font/Size/5xl（48） | alias Font/Size/5xl（48） | alias Font/Size/4xl（32） |
+| Font/--4xl | alias Font/Size/4xl（32） | alias Font/Size/4xl（32） | alias Font/Size/3xl（28） |
+| Font/--3xl | alias Font/Size/3xl（28） | alias Font/Size/3xl（28） | alias Font/Size/2xl（24） |
+| Font/--2xl | alias Font/Size/2xl（24） | alias Font/Size/2xl（24） | alias Font/Size/xl（20） |
+| Font/--xl | alias Font/Size/xl（20） | alias Font/Size/xl（20） | alias Font/Size/lg（18） |
+| Font/--lg | alias Font/Size/lg（18） | alias Font/Size/lg（18） | alias Font/Size/md（16） |
+| Font/--md | alias Font/Size/md（16） | alias Font/Size/md（16） | alias Font/Size/sm（14） |
+| Font/--sm | alias Font/Size/sm（14） | alias Font/Size/sm（14） | alias Font/Size/sm（14） |
+| Font/--xs | alias Font/Size/xs（12） | alias Font/Size/xs（12） | alias Font/Size/xs（12） |
 
-1\. font families
+- Type：number
+- Scope：FONT_SIZE
 
-\- font-family/body = user-selected font
+---
 
-\- font-family/heading = user-selected font
+### 4-C｜Spacing 響應式間距
 
-\- font-family/code = JetBrains Mono
+若有 Tablet，預設複製 Desktop 值。
 
-2\. font weights
+| Token 名稱 | Desktop | Tablet（若有） | Mobile |
+|---|---|---|---|
+| Spac/Btn/--px-lg | alias Spacing/5（20） | alias Spacing/5（20） | alias Spacing/3（12） |
+| Spac/Btn/--px-md | alias Spacing/4（16） | alias Spacing/4（16） | alias Spacing/3（12） |
+| Spac/Btn/--py | alias Spacing/3（12） | alias Spacing/3（12） | alias Spacing/2（8） |
+| Spac/Section/--px | alias Spacing/20（80） | alias Spacing/20（80） | alias Spacing/12（48） |
 
-Use NUMBER variables for fontWeight.
+- Type：number
+- Scope：GAP、PADDING
 
-Create at least:
+---
 
-\- font-weight/regular = 400
+### 4-D｜Radius 響應式圓角
 
-\- font-weight/medium = 500
+若有 Tablet，預設複製 Desktop 值。
 
-\- font-weight/semibold = 600
+| Token 名稱 | Desktop | Tablet（若有） | Mobile |
+|---|---|---|---|
+| Radius/--card | alias Radius/xl（48） | alias Radius/xl（48） | alias Radius/md（24） |
+| Radius/--btn | alias Radius/md（24） | alias Radius/md（24） | alias Radius/sm（12） |
+| Radius/--tag | alias Radius/sm（12） | alias Radius/sm（12） | alias Radius/sm（12） |
+| Radius/--pill | alias Radius/pill（1000） | alias Radius/pill（1000） | alias Radius/pill（1000） |
 
-\- font-weight/bold = 700
+- Type：number
+- Scope：CORNER_RADIUS
 
-3\. font sizes
+---
 
-Balanced SaaS app scale:
+## PHASE 5 — 建立 Text Style
 
-\- font-size/xs = 12
+建立中文與英文兩套 Text Style，以 `TW/` 和 `EN/` 做區隔。每個屬性綁定對應的 RWD token（不手動輸入值）。
 
-\- font-size/sm = 14
+Line Height 規則：
+- 單行文字（display、heading、title）使用 120%
+- 多行文字（body、caption）使用 150%
+- 若 Figma variable 不支援 % 單位，line-height 欄位留空，在 Style 建立後手動補上對應 % 值
 
-\- font-size/md = 16
+Letter Spacing：所有 Style 固定設定 2%
 
-\- font-size/lg = 18
+### TW 中文字型組（綁定 Font/Family/TW）
 
-\- font-size/xl = 20
+| Style 名稱 | font-size alias | 字重 | Line Height |
+|---|---|---|---|
+| TW/display | Font/--display | Bold | 120% |
+| TW/heading/h1 | Font/--5xl | Bold | 120% |
+| TW/heading/h2 | Font/--4xl | Bold | 120% |
+| TW/heading/h3 | Font/--3xl | Medium | 120% |
+| TW/heading/h4 | Font/--2xl | Medium | 120% |
+| TW/title/lg | Font/--xl | Medium | 120% |
+| TW/title/md | Font/--lg | Medium | 120% |
+| TW/body/lg | Font/--lg | Regular | 150% |
+| TW/body/md | Font/--md | Regular | 150% |
+| TW/body/sm | Font/--sm | Regular | 150% |
+| TW/caption | Font/--xs | Regular | 150% |
 
-\- font-size/2xl = 24
+### EN 英文字型組（綁定 Font/Family/EN）
 
-\- font-size/3xl = 30
+| Style 名稱 | font-size alias | 字重 | Line Height |
+|---|---|---|---|
+| EN/display | Font/--display | Bold | 120% |
+| EN/heading/h1 | Font/--5xl | Bold | 120% |
+| EN/heading/h2 | Font/--4xl | Bold | 120% |
+| EN/heading/h3 | Font/--3xl | Medium | 120% |
+| EN/heading/h4 | Font/--2xl | Medium | 120% |
+| EN/title/lg | Font/--xl | Medium | 120% |
+| EN/title/md | Font/--lg | Medium | 120% |
+| EN/body/lg | Font/--lg | Regular | 150% |
+| EN/body/md | Font/--md | Regular | 150% |
+| EN/body/sm | Font/--sm | Regular | 150% |
+| EN/caption | Font/--xs | Regular | 150% |
 
-\- font-size/4xl = 36
+---
 
-\- font-size/5xl = 48
+## PHASE 6 — 品質檢核
 
-4\. line heights
+完成後逐一確認以下項目，有任何不符合請修正後再回報：
 
-Create practical pixel values, for example:
+- [ ] `Base：Style` 建立完成，包含 Color / Font / Radius / Spacing 四類 token
+- [ ] `Functional：Tokens` 建立完成，採屬性導向結構（Surface / Content / Border / Action / Status）
+- [ ] `Functional：Tokens` 所有值皆為 alias，無寫死色碼
+- [ ] 若有第二套 Mode，配色根據選定底調方向重新配置，非直接反轉主 Mode ramp
+- [ ] 若有第二套 Mode，所有 token 在該底調下對比度與可讀性符合視覺要求
+- [ ] `RWD：Components` 建立完成，Mode 數量與問題 5 設定一致
+- [ ] Font token 各 Mode 縮放正確
+- [ ] Spacing token 各 Mode 縮小正確
+- [ ] Radius token 各 Mode 縮小正確
+- [ ] 若有 Tablet Mode，Font / Spacing / Radius 預設值與 Desktop 相同
+- [ ] 所有 Variable Scope 已設定
+- [ ] TW Text Style 共 11 個，綁定 Font/Family/TW
+- [ ] EN Text Style 共 11 個，綁定 Font/Family/EN
+- [ ] 所有 Text Style Letter Spacing 設定為 2%
+- [ ] 單行 Text Style Line Height 120%、多行 Text Style Line Height 150%
 
-\- line-height/xs = 16
+完成後輸出以下摘要：
 
-\- line-height/sm = 20
+```
+Token 系統建立完成。
 
-\- line-height/md = 24
+品牌主色：[hex]
+品牌副色：[hex 或「無」]
+中性色系：[選項名稱]
+中文字族：[字體名稱]
+英文字族：[字體名稱]
+Desktop 寬度：[px]
+Tablet 寬度：[px 或「無」]
+Mobile 寬度：[px]
+主要 Mode：[Light / Dark]
+第二套 Mode：[底調方向名稱 或「無」]
 
-\- line-height/lg = 28
+Collection 清單：
+- Base：Style（1 個 Mode）
+- Functional：Tokens（[1 或 2] 個 Mode）
+- RWD：Components（[2 或 3] 個 Mode）
 
-\- line-height/xl = 28
-
-\- line-height/2xl = 32
-
-\- line-height/3xl = 38
-
-\- line-height/4xl = 44
-
-\- line-height/5xl = 56
-
-5\. letter spacing
-
-Create number variables:
-
-\- tracking/tighter
-
-\- tracking/tight
-
-\- tracking/normal
-
-\- tracking/wide
-
-Use practical values suitable for Figma text properties.
-
-6\. paragraph spacing
-
-Create:
-
-\- paragraph-spacing/none = 0
-
-\- paragraph-spacing/sm = 4
-
-\- paragraph-spacing/md = 8
-
-\- paragraph-spacing/lg = 12
-
-7\. paragraph indent
-
-Create:
-
-\- paragraph-indent/none = 0
-
-E\) PRIMITIVES --- NUMBER
-
-Create reusable number primitives for:
-
-\- opacity/0
-
-\- opacity/5
-
-\- opacity/10
-
-\- opacity/20
-
-\- opacity/30
-
-\- opacity/40
-
-\- opacity/50
-
-\- opacity/60
-
-\- opacity/70
-
-\- opacity/80
-
-\- opacity/90
-
-\- opacity/100
-
-Also include practical numbers for:
-
-\- stroke-width/0
-
-\- stroke-width/1
-
-\- stroke-width/2
-
-\- stroke-width/3
-
-\- stroke-width/4
-
-F\) PRIMITIVES --- SHADOW
-
-Create shadow/elevation recipes for code handoff and semantic aliasing.
-
-Use strings if necessary for shadow recipes.
-
-Create at least:
-
-\- shadow/none
-
-\- shadow/sm
-
-\- shadow/md
-
-\- shadow/lg
-
-\- shadow/xl
-
-These should reflect realistic product UI shadows and allow a stronger
-dark-mode treatment where needed downstream.
-
-────────────────────────────────
-
-PHASE 4 --- SEMANTIC TOKEN STRUCTURE
-
-────────────────────────────────
-
-A\) SEMANTIC.COLOR
-
-Create a mature, non-component-specific semantic color system using
-property-first naming.
-
-Must include these families at minimum:
-
-SURFACE
-
-\- surface/bg/canvas
-
-\- surface/bg/default
-
-\- surface/bg/raised
-
-\- surface/bg/overlay
-
-\- surface/bg/sunken
-
-\- surface/bg/brand
-
-\- surface/bg/brand/hover
-
-\- surface/bg/brand/pressed
-
-\- surface/bg/brand/subtle
-
-\- surface/bg/brand/subtle/hover
-
-\- surface/bg/brand/subtle/pressed
-
-\- surface/bg/accent
-
-\- surface/bg/accent/subtle
-
-\- surface/bg/success
-
-\- surface/bg/success/subtle
-
-\- surface/bg/warning
-
-\- surface/bg/warning/subtle
-
-\- surface/bg/danger
-
-\- surface/bg/danger/subtle
-
-\- surface/bg/info
-
-\- surface/bg/info/subtle
-
-\- surface/bg/selected
-
-\- surface/bg/selected/hover
-
-\- surface/bg/selected/pressed
-
-\- surface/bg/disabled
-
-TEXT
-
-\- text/default
-
-\- text/subtle
-
-\- text/muted
-
-\- text/inverse
-
-\- text/brand
-
-\- text/brand/inverse
-
-\- text/accent
-
-\- text/success
-
-\- text/warning
-
-\- text/danger
-
-\- text/info
-
-\- text/disabled
-
-\- text/on-brand
-
-\- text/on-accent
-
-\- text/on-success
-
-\- text/on-warning
-
-\- text/on-danger
-
-\- text/on-info
-
-ICON
-
-\- icon/default
-
-\- icon/subtle
-
-\- icon/muted
-
-\- icon/inverse
-
-\- icon/brand
-
-\- icon/accent
-
-\- icon/success
-
-\- icon/warning
-
-\- icon/danger
-
-\- icon/info
-
-\- icon/disabled
-
-\- icon/on-brand
-
-\- icon/on-accent
-
-\- icon/on-success
-
-\- icon/on-warning
-
-\- icon/on-danger
-
-\- icon/on-info
-
-BORDER
-
-\- border/default
-
-\- border/subtle
-
-\- border/strong
-
-\- border/brand
-
-\- border/accent
-
-\- border/success
-
-\- border/warning
-
-\- border/danger
-
-\- border/info
-
-\- border/selected
-
-\- border/focus
-
-\- border/disabled
-
-STATIC / UTILITY
-
-\- background/neutral
-
-\- background/inverse
-
-\- overlay/default
-
-\- overlay/strong
-
-All semantic color tokens must alias appropriate primitive colors.
-
-Create different aliases for light and dark modes.
-
-Do not leave light and dark identical unless truly intentional.
-
-B\) SEMANTIC.DIMENSION
-
-Create semantic spacing tokens for layout use:
-
-\- space/inset/none
-
-\- space/inset/xs
-
-\- space/inset/sm
-
-\- space/inset/md
-
-\- space/inset/lg
-
-\- space/inset/xl
-
-\- space/inset/2xl
-
-\- space/stack/none
-
-\- space/stack/xs
-
-\- space/stack/sm
-
-\- space/stack/md
-
-\- space/stack/lg
-
-\- space/stack/xl
-
-\- space/stack/2xl
-
-\- space/inline/none
-
-\- space/inline/xs
-
-\- space/inline/sm
-
-\- space/inline/md
-
-\- space/inline/lg
-
-\- space/inline/xl
-
-\- space/inline/2xl
-
-\- space/section/sm
-
-\- space/section/md
-
-\- space/section/lg
-
-\- space/section/xl
-
-\- space/section/2xl
-
-\- space/section/3xl
-
-Alias these to the primitive size values.
-
-C\) SEMANTIC.RADIUS
-
-Create semantic radius tokens with 3 modes:
-
-\- default
-
-\- rounded
-
-\- no-corner-radius
-
-Tokens:
-
-\- radius/control/xs
-
-\- radius/control/sm
-
-\- radius/control/md
-
-\- radius/control/lg
-
-\- radius/container/sm
-
-\- radius/container/md
-
-\- radius/container/lg
-
-\- radius/container/xl
-
-\- radius/dialog
-
-\- radius/pill
-
-Each mode must alias the corresponding primitive radius values.
-
-D\) SEMANTIC.TYPOGRAPHY
-
-Create semantic typography tokens by property, all with one single mode
-only.
-
-Create property tokens for these text styles:
-
-\- display
-
-\- heading/h1
-
-\- heading/h2
-
-\- heading/h3
-
-\- heading/h4
-
-\- title/lg
-
-\- title/md
-
-\- body/lg
-
-\- body/md
-
-\- body/sm
-
-\- caption
-
-\- code/md
-
-\- code/sm
-
-For each style, create semantic variables for:
-
-\- font-family
-
-\- font-weight
-
-\- font-size
-
-\- line-height
-
-\- letter-spacing
-
-\- paragraph-spacing
-
-Naming pattern:
-
-\- typography/display/font-family
-
-\- typography/display/font-weight
-
-\- typography/display/font-size
-
-\- typography/display/line-height
-
-\- typography/display/letter-spacing
-
-\- typography/display/paragraph-spacing
-
-And same for each style, for example:
-
-\- typography/heading/h1/font-family
-
-\- typography/heading/h1/font-weight
-
-\- typography/heading/h1/font-size
-
-\...etc
-
-Rules:
-
-\- headings use mixed hierarchy:
-
-\- h1 = bold
-
-\- h2, h3, h4 = semibold
-
-\- body styles use medium
-
-\- code styles use JetBrains Mono
-
-\- no dedicated label styles
-
-\- paragraph-spacing can be 0 for most UI text unless a style genuinely
-needs it
-
-Recommended style mapping:
-
-\- display → heading family, 48 / 56, bold
-
-\- heading/h1 → heading family, 36 / 44, bold
-
-\- heading/h2 → heading family, 30 / 38, semibold
-
-\- heading/h3 → heading family, 24 / 32, semibold
-
-\- heading/h4 → heading family, 20 / 28, semibold
-
-\- title/lg → heading family, 18 / 28, semibold
-
-\- title/md → heading family, 16 / 24, semibold
-
-\- body/lg → body family, 18 / 28, medium
-
-\- body/md → body family, 16 / 24, medium
-
-\- body/sm → body family, 14 / 20, medium
-
-\- caption → body family, 12 / 16, medium
-
-\- code/md → code family, 14 / 20, medium or regular depending font
-rendering; use the closest appropriate token
-
-\- code/sm → code family, 12 / 16, medium or regular depending font
-rendering; use the closest appropriate token
-
-All semantic typography variables must alias primitive typography
-variables.
-
-E\) SEMANTIC.ELEVATION
-
-Create light/dark semantic elevation tokens:
-
-\- elevation/surface/sunken
-
-\- elevation/surface/default
-
-\- elevation/surface/raised
-
-\- elevation/surface/overlay
-
-\- elevation/shadow/none
-
-\- elevation/shadow/sm
-
-\- elevation/shadow/md
-
-\- elevation/shadow/lg
-
-\- elevation/shadow/xl
-
-Surface tokens should alias semantic/primitives color structure
-appropriately.
-
-Shadow tokens should alias shadow primitives where possible.
-
-F\) SEMANTIC.NUMBER
-
-Create semantic number tokens as aliases where useful, for example:
-
-\- opacity/disabled
-
-\- opacity/subtle
-
-\- opacity/overlay
-
-\- stroke-width/default
-
-\- stroke-width/strong
-
-\- stroke-width/focus
-
-────────────────────────────────
-
-PHASE 5 --- VARIABLE SCOPES
-
-────────────────────────────────
-
-Scope every variable to its relevant purpose only.
-
-Do not leave variables on "all supported properties" unless there is a
-strong reason.
-
-Apply scopes like this:
-
-COLOR SCOPES
-
-1\. Primitive colors:
-
-\- keep available only where sensible
-
-\- general palette colors may be scoped broadly, but prefer discipline
-
-2\. Semantic surface/background colors:
-
-Scope to:
-
-\- frame fill
-
-\- shape fill
-
-\- effects when relevant for overlays
-
-3\. Semantic text colors:
-
-Scope to:
-
-\- text fill only
-
-4\. Semantic icon/border colors:
-
-\- icon colors → shape fill
-
-\- border colors → stroke
-
-\- focus/overlay colors can also include effects if relevant
-
-NUMBER SCOPES
-
-1\. semantic.dimension spacing tokens:
-
-\- auto layout gap
-
-\- auto layout padding
-
-2\. semantic.radius and primitive radius:
-
-\- corner radius only
-
-3\. font-size variables:
-
-\- font size only
-
-4\. line-height variables:
-
-\- line height only
-
-5\. letter-spacing variables:
-
-\- letter spacing only
-
-6\. paragraph-spacing variables:
-
-\- paragraph spacing only
-
-7\. paragraph-indent variables:
-
-\- paragraph indent only
-
-8\. font-weight NUMBER variables:
-
-\- font weight only
-
-9\. opacity tokens:
-
-\- layer opacity only
-
-10\. stroke-width tokens:
-
-\- stroke only
-
-11\. any size tokens intended for width/height utilities:
-
-\- width and height only
-
-Only do this if those tokens are truly intended for size, not for
-spacing.
-
-STRING SCOPES
-
-1\. font-family variables:
-
-\- font family only
-
-2\. any text-string utility variables:
-
-\- text string only
-
-Only create these if actually needed. Otherwise skip them.
-
-3\. if MCP or API requires string fallback for font weight/style, use:
-
-\- font weight or style only
-
-Only do this as a fallback if direct number binding fails.
-
-Important:
-
-Be deliberate with scoping.
-
-This is a mature token architecture, so scope should reduce noise and
-prevent misuse.
-
-────────────────────────────────
-
-PHASE 6 --- CODE SYNTAX METADATA
-
-────────────────────────────────
-
-Where supported, set WEB code syntax metadata on variables for cleaner
-Dev Mode / React handoff.
-
-Use slash-based token names converted into CSS custom property style
-where reasonable.
-
-Example approach:
-
-\- color/brand/500 → var(\--color-brand-500)
-
-\- surface/bg/default → var(\--surface-bg-default)
-
-\- typography/body/md/font-size → var(\--typography-body-md-font-size)
-
-Apply code syntax consistently.
-
-────────────────────────────────
-
-PHASE 7 --- LOCAL TEXT STYLES
-
-────────────────────────────────
-
-Create local text styles for:
-
-\- display
-
-\- heading/h1
-
-\- heading/h2
-
-\- heading/h3
-
-\- heading/h4
-
-\- title/lg
-
-\- title/md
-
-\- body/lg
-
-\- body/md
-
-\- body/sm
-
-\- caption
-
-\- code/md
-
-\- code/sm
-
-Use these exact local style names:
-
-\- display
-
-\- heading/h1
-
-\- heading/h2
-
-\- heading/h3
-
-\- heading/h4
-
-\- title/lg
-
-\- title/md
-
-\- body/lg
-
-\- body/md
-
-\- body/sm
-
-\- caption
-
-\- code/md
-
-\- code/sm
-
-For each local text style:
-
-1\. create the style
-
-2\. bind each supported property to the matching semantic typography
-variable:
-
-\- font family
-
-\- font weight
-
-\- font size
-
-\- line height
-
-\- letter spacing
-
-\- paragraph spacing
-
-3\. do not manually type values where variable binding is available
-
-4\. ensure the style is actually bound, not just visually matched
-
-Important implementation detail:
-
-Use the correct text-style variable binding API / MCP method.
-
-Bind the style properties, not only the sample text node.
-
-The goal is for the text style itself to stay token-driven.
-
-If MCP fails to bind fontWeight as a number variable:
-
-\- attempt the correct compatible alternative supported by the current
-Figma API/MCP runtime
-
-\- keep all other typography properties variable-bound
-
-\- do not stop unless absolutely necessary
-
-Load fonts before applying font-dependent text properties.
-
-If the requested heading/body font is unavailable:
-
-\- fall back to Inter for heading and body automatically
-
-If JetBrains Mono is unavailable:
-
-\- use the closest available monospace fallback, but prefer JetBrains
-Mono first
-
-────────────────────────────────
-
-PHASE 8 --- TYPOGRAPHY PREVIEW FRAME
-
-────────────────────────────────
-
-Create a new page called \"Typography\" and inside it Create a small,
-neat "Typography preview" frame.
-
-Requirements:
-
-\- title the frame: Typography preview
-
-\- use semantic surface/text color tokens only
-
-\- use auto layout strictly.
-
-\- clean spacing using semantic dimension tokens
-
-\- inside it, show each text style with:
-
-\- style name
-
-\- a sample sentence
-
-\- Make sure each container width is set to hug contents.
-
-Suggested sample sentence:
-
-"The quick brown fox jumps over the lazy dog."
-
-Each preview row should visibly use the corresponding local text style.
-
-Order:
-
-1\. display
-
-2\. heading/h1
-
-3\. heading/h2
-
-4\. heading/h3
-
-5\. heading/h4
-
-6\. title/lg
-
-7\. title/md
-
-8\. body/lg
-
-9\. body/md
-
-10\. body/sm
-
-11\. caption
-
-12\. code/md
-
-13\. code/sm
-
-────────────────────────────────
-
-PHASE 9 --- QUALITY CONTROL
-
-────────────────────────────────
-
-Before finishing, verify all of the following:
-
-1\. All required collections exist and are local.
-
-2\. All required modes exist with exact names.
-
-3\. Semantic tokens alias primitives where expected.
-
-4\. Light/dark semantic color values are meaningfully different where
-needed.
-
-5\. Radius modes switch correctly between default / rounded /
-no-corner-radius.
-
-6\. Variable scopes are applied intentionally and narrowly.
-
-7\. WEB code syntax metadata exists where supported.
-
-8\. All requested local text styles exist.
-
-9\. Text styles are bound to semantic typography variables, not just
-manually matched.
-
-10\. Typography preview frame exists and uses the actual local text
-styles.
-
-11\. No component-specific tokens were created.
-
-12\. Naming is clean and slash-based throughout.
-
-After finishing, give a short summary of:
-
-\- chosen brand color
-
-\- chosen accent color or none
-
-\- chosen neutral family
-
-\- chosen heading/body font
-
-\- whether all collections, modes, scopes, text styles, and preview
-frame were created successfully
-
-\- any fallback used
-
-Important instruction:
-
-Create variables first, then semantic aliases, then text styles, then
-preview frame, and only after that run verification.
+Text Style 清單：
+- TW：display / h1 / h2 / h3 / h4 / title-lg / title-md / body-lg / body-md / body-sm / caption
+- EN：display / h1 / h2 / h3 / h4 / title-lg / title-md / body-lg / body-md / body-sm / caption
+```
